@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Old City",
+    "areas": ["Old City", "Si Phum"],
+    "slugs": []
+  },
+  {
+    "name": "Nimman",
+    "areas": ["Nimman"],
+    "slugs": ["seven-pounds"]
+  },
+  {
+    "name": "Santitham & North",
+    "areas": ["Santitham", "Chang Phueak", "San Phi Suea"],
+    "slugs": ["red-bar-cnx", "huan-soontaree"]
+  },
+  {
+    "name": "Riverside & Night Bazaar",
+    "areas": ["Chang Moi", "Chang Khlan", "Riverside", "Night Bazaar", "Wat Ket", "Ping Riverside", "Fa Ham"],
+    "slugs": []
+  },
+  {
+    "name": "Wua Lai & South",
+    "areas": ["Hai Ya", "Haiya", "Wualai", "Wua Lai", "Pa Daet"],
+    "slugs": []
+  },
+  {
+    "name": "Suthep & University",
+    "areas": ["Suthep", "Suan Dok", "Huay Kaew", "Chiang Mai University", "Doi Suthep", "Doi Suthep foothills"],
+    "slugs": ["kad-na-mor-market", "street-coffee-crew"]
+  },
+  {
+    "name": "Day Trips",
+    "areas": ["Mae Jo", "Mae Rim", "Mae Taeng", "Doi Saket", "Mae On", "Saraphi", "Outside the City", "Mae Kampong", "San Kamphaeng", "Chom Thong", "Doi Inthanon", "Hang Dong", "Mae Hia", "Mae Wang", "Mae Chaem", "San Sai"],
+    "slugs": ["river-rock-cafe-hill"]
+  }
+]
