@@ -1,12 +1,14 @@
 import React, { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, matchPath, useLocation, useNavigate, useNavigationType, useSearchParams } from 'react-router';
 import useEmblaCarousel from 'embla-carousel-react';
+import {APILoadingStatus, useApiLoadingStatus} from '@vis.gl/react-google-maps';
 import records from './generated/places.json';
 import site from './generated/site.json';
 import type { Category, Place } from './types.ts';
 import { areas, categories, filterPlaces, normalizeArea, queryForPlace, readCategory, setCategory, setQuery } from './guide.ts';
 import { mapsConfig } from './maps.ts';
 import {usePlacePhotos} from './usePlacePhotos.ts';
+import {locationMessages, useCurrentLocation} from './useCurrentLocation.ts';
 import {formatHours} from './hours.ts';
 import {Icon} from './Icon.tsx';
 
@@ -22,8 +24,8 @@ class MapBoundary extends React.Component<{children: React.ReactNode; fallback: 
 }
 
 function Wordmark({small = false}: {small?: boolean}) {
-  return <span className={`wordmark ${small ? 'wordmark-small' : ''}`} aria-label={site.name}>
-    <span>Mai</span><span>Notes<span className="wordmark-check" aria-hidden="true">✔</span></span>
+  return <span className={`wordmark ${small ? 'wordmark-small' : ''}`} aria-label="Chiang Mai">
+    <span>Chiang</span><span>Mai<svg className="wordmark-check" viewBox="184 69 68 59" aria-hidden="true"><path d="M184.952 99.4691C186.317 96.7429 189.032 93.3165 193.794 94.6871C197.874 96.0576 200.603 100.154 202.636 105.622C202.562 105.398 204.387 103.64 204.609 103.402C205.277 102.642 205.959 101.897 206.642 101.152C207.962 99.6926 209.297 98.2624 210.632 96.8323C213.154 94.1508 215.736 91.514 218.406 88.9814C223.124 84.4824 228.138 80.2516 233.657 76.7806C236.075 75.261 238.597 73.8905 241.208 72.7434C242.47 72.1922 243.745 71.6857 245.051 71.2388C245.986 70.9259 246.965 70.5535 247.959 70.33C248.493 70.2109 250.555 69.6894 250.911 70.33C251.297 71.0302 249.338 72.0879 248.953 72.3859C243.597 76.3038 238.479 80.4751 233.672 85.0336C228.732 89.7412 224.088 94.7616 219.771 100.05C215.142 105.696 210.885 111.64 206.968 117.793C205.217 120.534 203.556 123.32 201.939 126.135C201.256 126.82 200.574 126.82 199.891 126.135C197.162 119.297 195.129 112.46 191.717 105.637C190.352 102.225 188.32 99.484 184.907 99.484" fill="currentColor"/></svg></span>
   </span>;
 }
 
@@ -32,7 +34,7 @@ function Categories({selected, onChange}: {selected: Category | ''; onChange: (c
     {['All', ...categories].map((category, index, all) => <React.Fragment key={category}>
       <button type="button" aria-pressed={category === 'All' ? !selected : selected === category}
         onClick={() => onChange(category)}>
-        {category}{(category === 'All' ? !selected : selected === category)&&<span className="check" aria-hidden="true">✔</span>}
+        {category}{(category === 'All' ? !selected : selected === category)&&<svg className="check" viewBox="0 0 16 14" aria-hidden="true"><path d="M.35 7.26c.31-.63.95-1.42 2.05-1.1.95.32 1.58 1.26 2.05 2.52 3.78-4.26 6.94-7.25 10.72-8.2.47 0 .63 0 .32.31-4.1 2.84-8.04 7.1-11.2 12.62-.16.16-.32.16-.47 0-.63-1.58-1.1-3.15-1.89-4.73-.32-.79-.79-1.42-1.58-1.42" fill="currentColor"/></svg>}
       </button>{index !== all.length - 1 && <span aria-hidden="true">,</span>}
     </React.Fragment>)}
   </nav>;
@@ -46,8 +48,8 @@ function Filters({query, area, change, count, reset}: {query: string; area: stri
   </form>;
 }
 
-function AboutCopy({onOpen}: {onOpen: () => void}) {
-  return <section className="about-copy"><p>{site.description}</p><p><button type="button" className="text-link" onClick={onOpen}>About {site.shortName} ↗</button></p></section>;
+function AboutCopy() {
+  return <section className="about-copy"><p>{site.description}</p></section>;
 }
 
 function PhotoStrip({place, href, onOpen}: {place: Place; href?: string; onOpen?: (trigger: HTMLAnchorElement) => void}) {
@@ -146,6 +148,8 @@ function Detail({place: selectedPlace, index: selectedIndex, invalid, anchored =
 }
 
 export default function Guide() {
+  const mapsStatus=useApiLoadingStatus();
+  const userLocation=useCurrentLocation(Boolean(mapConfig)&&mapsStatus===APILoadingStatus.LOADED);
   const navigate=useNavigate(), location=useLocation(), navigationType=useNavigationType();
   const [params,setParams]=useSearchParams();
   const selectedCategory = readCategory(params);
@@ -227,12 +231,17 @@ export default function Guide() {
   const mapFallback=<div className="map-unavailable" role="status"><span>Google Maps isn't available</span><span className="map-external">{selected?<a href={selected.googleMapsUrl} target="_blank" rel="noreferrer">Open this place in Google Maps ↗</a>:<span>Select a place to open it in Google Maps.</span>}</span></div>;
   return <>
     <a className="skip-link" href="#places" onClick={event=>{event.preventDefault();setListExpanded(true);requestAnimationFrame(()=>list.current?.focus({preventScroll:true}));}}>Skip to places</a>
+    {userLocation.error&&<div className="location-notice" role="status">
+      <p>{locationMessages[userLocation.error]}</p>
+      <div>{userLocation.error!=='unsupported'&&userLocation.error!=='insecure'&&<button type="button" onClick={userLocation.retry}>Try again</button>}
+        <button type="button" onClick={userLocation.dismissError} aria-label="Dismiss location message">Dismiss</button></div>
+    </div>}
     <main className={`guide ${showMap?'mobile-map-open':''} ${!listExpanded?'list-collapsed':''} ${listScrollTop>100?'tablet-scrolled':''} ${showInfo?'info-open':''}`}>
       <h1 className="sr-only">{site.name}</h1>
       <header className="mobile-header"><button type="button" onClick={()=>setShowInfo(true)} className="info-trigger">INFO</button><Categories selected={selectedCategory} onChange={changeCategories}/>{mapToggle}</header>
       <div className="tablet-map-toggle">{mapToggle}</div>
       <section id="guide-map" className="map-region" aria-label="Map">{mapConfig&&mapRequested?<MapBoundary fallback={mapFallback} onError={()=>setMapReady(false)}><Suspense fallback={<div className="map-unavailable" role="status">Loading Google Maps…</div>}><GuideMap config={mapConfig} places={places} activePlaces={shown} selected={selected} selectionSource={selectionSource}
-        desktop={desktop} visible={desktop||showMap} detail={anchored?detail:null} onReady={setMapReady} onClose={close}
+        desktop={desktop} visible={desktop||showMap} detail={anchored?detail:null} onReady={setMapReady} onClose={close} userPosition={userLocation.position}
         onSelect={(place,trigger)=>{
           if(selected?.slug===place.slug){close();return;}
           lastTrigger.current=trigger||null;
@@ -241,10 +250,10 @@ export default function Guide() {
         }}/></Suspense></MapBoundary>:mapFallback}<button type="button" className="expand-list" onClick={()=>setListExpanded(value=>!value)} aria-label={listExpanded?'Hide place list':'Show place list'} aria-controls="places" aria-expanded={listExpanded}><Icon name={listExpanded?'arrow_forward':'arrow_back'}/></button></section>
       <section className="list-region" aria-label="Places">{!listExpanded&&<button type="button" className="collapsed-expand" aria-controls="places" aria-expanded={false} onClick={()=>setListExpanded(true)}>EXPAND</button>}<div ref={list} className="list-scroll" id="places" tabIndex={-1} onScroll={event=>{if(window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches)setListScrollTop(event.currentTarget.scrollTop);}}>
         <div className="list-cap"/>
-        <div className="mobile-brand"><div ref={tabletBrand} className="responsive-brand" style={{'--tablet-brand-opacity':brandOpacity} as React.CSSProperties}><div className="tablet-categories"><Categories selected={selectedCategory} onChange={changeCategories}/></div><div className="mobile-wordmark" aria-hidden="true"><Wordmark/></div><AboutCopy onOpen={()=>setShowInfo(true)}/><footer className="guide-footer"><div><span className="label">Location</span><span>{site.city}</span></div><button type="button" onClick={()=>setShowInfo(true)}>INFO</button></footer></div><Filters {...filterProps}/></div>
+        <div className="mobile-brand"><div ref={tabletBrand} className="responsive-brand" style={{'--tablet-brand-opacity':brandOpacity} as React.CSSProperties}><div className="tablet-categories"><Categories selected={selectedCategory} onChange={changeCategories}/></div><div className="mobile-wordmark" aria-hidden="true"><Wordmark/></div><AboutCopy/><footer className="guide-footer"><div><span className="label">Location</span><span>{site.city}</span></div><button type="button" onClick={()=>setShowInfo(true)}>INFO</button></footer></div><Filters {...filterProps}/></div>
         <div className="place-grid">{shown.length ? shown.map(place=><PlaceCard key={place.slug} place={place} index={places.indexOf(place)} query={location.search} selected={selected?.slug===place.slug} onSelect={trigger=>{lastTrigger.current=trigger;}}/>) : <div className="empty-state"><h2>{places.length ? 'No places found' : 'The collection is being prepared'}</h2><p>{places.length?'Try another category, area or search.':'New places will appear here once their details have been checked.'}</p>{places.length>0&&<button type="button" onClick={reset}>Clear filters ↗</button>}</div>}</div>
       </div></section>
-      <aside className="brand-region" aria-label="About the guide"><Categories selected={selectedCategory} onChange={changeCategories}/><Filters {...filterProps}/><div className="brand-center" aria-hidden="true"><Wordmark/></div><AboutCopy onOpen={()=>setShowInfo(true)}/><footer className="guide-footer"><div><span className="label">Location</span><span>{site.city}</span></div><button type="button" onClick={()=>setShowInfo(true)}>INFO</button></footer></aside>
+      <aside className="brand-region" aria-label="About the guide"><Categories selected={selectedCategory} onChange={changeCategories}/><Filters {...filterProps}/><div className="brand-center" aria-hidden="true"><Wordmark/></div><AboutCopy/><footer className="guide-footer"><div><span className="label">Location</span><span>{site.city}</span></div><button type="button" onClick={()=>setShowInfo(true)}>INFO</button></footer></aside>
     </main>
     {!anchored&&detail}
     <dialog ref={info} className="info-panel" aria-labelledby="info-title" onCancel={event=>{event.preventDefault();setShowInfo(false);}}><header><button type="button" onClick={()=>setShowInfo(false)}>CLOSE</button></header><div className="info-body"><h2 id="info-title" className="sr-only">About {site.name}</h2><div className="info-main"><div className="info-logo"><Wordmark small/></div><div className="info-copy"><p>Our shared collection starts with recommendations from Lonely Planet. Each published place includes its location and useful links for planning a visit.</p><p>Addresses, opening hours and availability can change. Use the place's official links before heading out.</p><p>This is an independent guide for friends, with no affiliation to Lonely Planet or Trip Tips.</p><p><a href="/legal.html#terms" target="_blank" rel="noreferrer">Terms of use ↗</a> · <a href="/legal.html#privacy" target="_blank" rel="noreferrer">Privacy policy ↗</a></p></div><div className="info-space" aria-hidden="true"/></div><div className="info-location"><div><span className="label">Location</span><span>{site.city}</span></div><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors · ODbL</a></div></div></dialog>

@@ -3,6 +3,11 @@ export const mapStyles: MapStyle[] = ['Light', 'Dark', 'Satellite'];
 export const chiangMaiCenter = {lat: 18.7883, lng: 98.9853};
 export type MapSelectionSource = 'list' | 'marker' | 'route';
 
+export function centerOnUserLocation(map: Pick<google.maps.Map,'getZoom'|'setZoom'|'panTo'>, position: {lat: number; lng: number}) {
+  if((map.getZoom()??0)<15)map.setZoom(15);
+  map.panTo(position);
+}
+
 export function selectionZoom(desktop: boolean, source: MapSelectionSource, hasSelected: boolean) {
   if (hasSelected) return undefined;
   if (source === 'route') return desktop ? undefined : 15;

@@ -5,17 +5,28 @@ import {APILoadingStatus, AdvancedMarker, CollisionBehavior, InfoWindow, Map as 
 import type {MapCameraChangedEvent} from '@vis.gl/react-google-maps';
 import type {Place} from './types.ts';
 import {Icon} from './Icon.tsx';
-import {chiangMaiCenter, detailPanOffset, mobileMapGeometry, mobilePanOffset, mapStyleOptions, mapStyles, selectionZoom} from './maps.ts';
+import {centerOnUserLocation, chiangMaiCenter, detailPanOffset, mobileMapGeometry, mobilePanOffset, mapStyleOptions, mapStyles, selectionZoom} from './maps.ts';
 import type {MapSelectionSource, MapStyle} from './maps.ts';
+import type {UserPosition} from './useCurrentLocation.ts';
 
 let diagnosticInstance = 0;
 
 interface Props {
   config: {apiKey: string; mapId: string}; places: Place[]; activePlaces: Place[]; selected?: Place;
+  userPosition?: UserPosition;
   selectionSource: MapSelectionSource;
   desktop: boolean; visible: boolean; detail: ReactNode;
   onSelect: (place: Place, trigger?: HTMLElement) => void;
   onClose: () => void; onReady: (ready: boolean) => void;
+}
+
+function CurrentLocationMarker({position}: {position: UserPosition}) {
+  const map=useMap();
+  return <AdvancedMarker position={position} title="Your location. Click to center the map."
+    className="user-location-marker" anchorLeft="-50%" anchorTop="-50%" zIndex={2} clickable
+    collisionBehavior={CollisionBehavior.REQUIRED} onClick={()=>{if(map)centerOnUserLocation(map,position);}}>
+    <span aria-hidden="true"/>
+  </AdvancedMarker>;
 }
 
 function PlaceMarker({place, index, selected, inactive, desktop, detail, onSelect, onClose}: {
@@ -107,7 +118,7 @@ function Camera({selected, selectionSource, desktop, visible, onReady}: Pick<Pro
 }
 
 function MapRuntime(props: Props) {
-  const {config,places,activePlaces,selected,selectionSource,desktop,visible,detail,onSelect,onClose,onReady}=props;
+  const {config,places,activePlaces,selected,userPosition,selectionSource,desktop,visible,detail,onSelect,onClose,onReady}=props;
   const status=useApiLoadingStatus();
   const [style,setStyle]=useState<MapStyle>('Satellite');
   const [scheme,setScheme]=useState<'LIGHT'|'DARK'>('LIGHT');
@@ -137,6 +148,7 @@ function MapRuntime(props: Props) {
       onCameraChanged={trackCamera} onTilesLoaded={()=>setTilesLoaded(true)} onClick={()=>{setMenu(false);if(selected)onClose();}}>
       {places.map((place,index)=><PlaceMarker key={place.slug} place={place} index={index+1}
         selected={place.slug===selected?.slug} inactive={!activePlaces.includes(place)} desktop={desktop} detail={detail} onSelect={onSelect} onClose={onClose}/>)}
+      {userPosition&&<CurrentLocationMarker position={userPosition}/>}
     </GoogleMap>}
     {/* Keep selection history when a map style change replaces the SDK instance. */}
     <Camera selected={selected} selectionSource={selectionSource} desktop={desktop} visible={visible} onReady={onReady}/>
