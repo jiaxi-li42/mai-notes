@@ -94,8 +94,7 @@ function PlaceCard({place, index, selected, query, onSelect}: {place: Place; ind
     <div className="card-inner"><div className="card-index"><span>{index + 1}</span><span className="vertical-category" aria-hidden="true">{place.category.split('').map((letter,i)=><span key={i}>{letter}</span>)}</span></div><div className="card-body">
       <div className="card-heading"><PhotoStrip place={place} href={`${selected ? '/' : `/places/${place.slug}`}${query}`} onOpen={onSelect}/>
       <div className="card-title"><h2><Link to={{pathname: selected ? '/' : `/places/${place.slug}`, search: query}} state={{mapSelectionSource:'list'}} onClick={event=>onSelect(event.currentTarget)} aria-current={selected ? 'page' : undefined}>{place.name}</Link></h2><p className="card-area"><span className="sr-only">{place.category} · </span>{place.area}</p></div></div>
-      <p className="card-description">{place.description}</p>
-      <div className="card-details"><PlaceFacts place={place}/></div>
+      <div className="card-details"><div className="place-facts"><div className="fact-address"><h3>Address</h3><p>{place.address}</p></div></div></div>
     </div></div>
   </article>;
 }

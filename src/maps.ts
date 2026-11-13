@@ -25,16 +25,6 @@ export function detailPanOffset(width: number) {
   return Math.max(0, 374 - width / 2);
 }
 
-export function mobilePanOffset(mapHeight: number, mapTop: number, viewportHeight: number) {
-  const visibleHeight=Math.min(mapHeight,Math.max(0,viewportHeight/3-mapTop));
-  return (mapHeight-visibleHeight)/2;
-}
-
-export function mobileMapGeometry(width: number, height: number, headerHeight: number) {
-  if(width<768)return {height:Math.max(0,height-headerHeight)*.6,top:headerHeight};
-  return {height:Math.max(0,height*.6-headerHeight),top:headerHeight};
-}
-
 export function mapStyleOptions(style: MapStyle, scheme: 'LIGHT' | 'DARK') {
   return {mapTypeId: style === 'Satellite' ? 'satellite' : 'roadmap',
     colorScheme: style === 'Satellite' ? scheme : style === 'Dark' ? 'DARK' : 'LIGHT'};

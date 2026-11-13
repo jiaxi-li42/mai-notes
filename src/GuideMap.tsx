@@ -5,7 +5,7 @@ import {APILoadingStatus, AdvancedMarker, CollisionBehavior, InfoWindow, Map as 
 import type {MapCameraChangedEvent} from '@vis.gl/react-google-maps';
 import type {Place} from './types.ts';
 import {Icon} from './Icon.tsx';
-import {centerOnUserLocation, chiangMaiCenter, detailPanOffset, mobileMapGeometry, mobilePanOffset, mapStyleOptions, mapStyles, selectionZoom} from './maps.ts';
+import {centerOnUserLocation, chiangMaiCenter, detailPanOffset, mapStyleOptions, mapStyles, selectionZoom} from './maps.ts';
 import type {MapSelectionSource, MapStyle} from './maps.ts';
 import type {UserPosition} from './useCurrentLocation.ts';
 
@@ -57,21 +57,14 @@ function Camera({selected, selectionSource, desktop, visible, onReady}: Pick<Pro
     pendingAlignment.current?.remove();
     pendingAlignment.current=null;
     if(!map||!selected)return;
+    const center={lat:selected.lat,lng:selected.lng};
+    if(!desktop){map.panTo(center);return;}
     const projection=map.getProjection();
     if(!projection){pendingAlignment.current=map.addListener('projection_changed',alignSelection);return;}
     const rect=map.getDiv().getBoundingClientRect();
-    const guide=map.getDiv().closest('.guide');
-    const header=guide?.querySelector('.mobile-header');
-    const viewport=guide?.getBoundingClientRect();
-    // Use the expanded viewport so the opening transition does not require a second pan.
-    const mobile=viewport&&header?mobileMapGeometry(viewport.width,viewport.height,header.getBoundingClientRect().height):rect;
-    const mapTop=viewport&&header?viewport.top+mobile.top:rect.top;
-    const x=desktop?detailPanOffset(rect.width):0;
-    const y=desktop?0:mobilePanOffset(mobile.height,mapTop,window.innerHeight);
-    const center={lat:selected.lat,lng:selected.lng};
     const point=projection.fromLatLngToPoint(center);
     // One pan target keeps an asynchronous panTo from overwriting the popup offset.
-    if(point){const scale=2**(map.getZoom()??15);point.x+=x/scale;point.y+=y/scale;}
+    if(point)point.x+=detailPanOffset(rect.width)/2**(map.getZoom()??15);
     map.panTo(point?projection.fromPointToLatLng(point)||center:center);
   },[map,selected,desktop]);
   useEffect(()=>()=>{pendingAlignment.current?.remove();},[alignSelection]);
@@ -99,7 +92,7 @@ function Camera({selected, selectionSource, desktop, visible, onReady}: Pick<Pro
   },[map,selected,selectionSource,desktop,visible,alignSelection]);
   useEffect(()=>{
     if(!map||!selected||!visible)return;
-    // Mobile map expansion is already accounted for; only viewport resizes need realignment.
+    // On mobile, viewport changes matter; map expansion must not trigger a second pan.
     const container=desktop?map.getDiv():map.getDiv().closest('.guide')||map.getDiv();
     const initial=container.getBoundingClientRect();
     let previousWidth=initial.width,previousHeight=initial.height;
